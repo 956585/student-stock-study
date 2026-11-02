@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>企業データ自動分析＆1株投資シミュレーター | Portfolio Project</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Hiragino Sans', 'Meiryo', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { font-size: 1.5rem; color: var(--accent); }
+    .subtitle { font-size: 0.9rem; color: var(--muted); margin-top: 4px; }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .stat-label { font-size: 0.85rem; color: var(--muted); }
+    .stat-value { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    input, select {
+      background: #0f172a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+    button {
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { background: var(--accent-hover); color: #fff; }
+    .btn-excel { background: var(--success); color: #052e16; }
+    .btn-excel:hover { background: #16a34a; color: #fff; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; background: rgba(15, 23, 42, 0.5); }
+    tr:hover { background: rgba(56, 189, 248, 0.05); }
+    .tag-buy {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .tag-warn {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+    }
+    .ai-box {
+      margin-top: 24px;
+      border-left: 4px solid var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>📊 企業データ自動分析 ＆ 少額（1株）投資シミュレーター</h1>
+        <p class="subtitle">AI駆動開発ポートフォリオ：企業の財務指標フィルタリング・予算内購入株数の自動計算・Excel用CSVワンクリック出力</p>
+      </div>
+      <span class="badge">開発：情報工学科1年（Web / VBA / Python連携）</span>
+    </header>
+
+    <div class="grid">
+      <div class="card">
+        <div class="stat-label">投資上限予算（設定可能）</div>
+        <div class="stat-value" id="budgetDisplay">¥10,000</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">条件クリア企業数</div>
+        <div class="stat-value" id="countDisplay">0 社</div>
+      </div>
+      <div class="card">
+        <div class="stat-label">平均予想配当利回り</div>
+        <div class="stat-value" id="avgYieldDisplay">0.00 %</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="controls">
+        <label>
+          予算上限（円）：
+          <input type="number" id="budgetInput" value="10000" step="1000" min="1000" style="width: 120px;">
+        </label>
+        <label>
+          業種フィルタ：
+          <select id="sectorFilter">
+            <option value="ALL">すべての業種</option>
+            <option value="情報・通信">情報・通信</option>
+            <option value="輸送用機器">輸送用機器</option>
+            <option value="銀行・金融">銀行・金融</option>
+            <option value="商社・卸売">商社・卸売</option>
+            <option value="電機・精密">電機・精密</option>
+          </select>
+        </label>
+        <label>
+          最低配当利回り：
+          <select id="yieldFilter">
+            <option value="0">指定なし（0%〜）</option>
+            <option value="2.5">2.5% 以上</option>
+            <option value="3.5">3.5% 以上（高配当）</option>
+          </select>
+        </label>
+        <input type="text" id="keywordInput" placeholder="企業名・コードで検索..." style="flex:1; min-width: 180px;">
+        <button class="btn-excel" onclick="exportToExcelCSV()">📥 Excel用CSVを1秒出力</button>
+      </div>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>コード</th>
+              <th>企業名</th>
+              <th>業種</th>
+              <th>1株株価</th>
+              <th>配当利回り</th>
+              <th>PER</th>
+              <th>予算内で買える株数</th>
+              <th>年間予想配当金</th>
+              <th>AI自動判定</th>
+            </tr>
+          </thead>
+          <tbody id="companyTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card ai-box">
+      <h3>💡 自動分析サマリー（Excel VBA / Python連携用レポート）</h3>
+      <p id="aiSummaryText" style="margin-top: 8px; color: var(--muted);"></p>
+    </div>
+  </div>
+
+  <script>
+    // サンプル企業データベース（上場主要銘柄の代表的な指標データ）
+    const companies = [
+      { code: "9432", name: "日本電信電話 (NTT)", sector: "情報・通信", price: 155, yield: 3.35, per: 11.8 },
+      { code: "9434", name: "ソフトバンク", sector: "情報・通信", price: 198, yield: 4.34, per: 17.5 },
+      { code: "7203", name: "トヨタ自動車", sector: "輸送用機器", price: 2680, yield: 2.80, per: 9.5 },
+      { code: "8306", name: "三菱UFJフィナンシャルG", sector: "銀行・金融", price: 1620, yield: 3.08, per: 12.1 },
+      { code: "8591", name: "オリックス", sector: "銀行・金融", price: 3350, yield: 3.10, per: 10.4 },
+      { code: "8058", name: "三菱商事", sector: "商社・卸売", price: 2850, yield: 3.51, per: 11.2 },
+      { code: "6758", name: "ソニーグループ", sector: "電機・精密", price: 2790, yield: 0.72, per: 16.8 },
+      { code: "7269", name: "スズキ", sector: "輸送用機器", price: 1610, yield: 2.48, per: 9.8 },
+      { code: "8411", name: "みずほフィナンシャルG", sector: "銀行・金融", price: 3120, yield: 3.68, per: 11.5 },
+      { code: "9433", name: "KDDI", sector: "情報・通信", price: 4650, yield: 3.12, per: 14.2 }
+    ];
+
+    function renderTable() {
+      const budget = Number(document.getElementById("budgetInput").value) || 10000;
+      const sector = document.getElementById("sectorFilter").value;
+      const minYield = Number(document.getElementById("yieldFilter").value) || 0;
+      const keyword = document.getElementById("keywordInput").value.trim().toLowerCase();
+
+      document.getElementById("budgetDisplay").textContent = "¥" + budget.toLocaleString();
+
+      const filtered = companies.filter(c => {
+        if (sector !== "ALL" && c.sector !== sector) return false;
+        if (c.yield < minYield) return false;
+        if (keyword && !c.name.toLowerCase().includes(keyword) && !c.code.includes(keyword)) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById("companyTableBody");
+      tbody.innerHTML = "";
+
+      let totalYield = 0;
+      let affordableCount = 0;
+
+      filtered.forEach(c => {
+        totalYield += c.yield;
+        const maxShares = Math.floor(budget / c.price);
+        if (maxShares > 0) affordableCount++;
+        const investedAmount = maxShares * c.price;
+        const annualDividend = Math.round(investedAmount * (c.yield / 100));
+
+        let statusBadge = "";
+        if (maxShares === 0) {
+          statusBadge = `<span class="tag-warn">予算超過</span>`;
+        } else if (c.yield >= 3.0 && c.per <= 13.0) {
+          statusBadge = `<span class="tag-buy">★割安・高配当</span>`;
+        } else {
+          statusBadge = `<span class="tag-buy">1株購入可</span>`;
+        }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${c.code}</td>
+          <td><strong>${c.name}</strong></td>
+          <td>${c.sector}</td>
+          <td>¥${c.price.toLocaleString()}</td>
+          <td>${c.yield.toFixed(2)}%</td>
+          <td>${c.per.toFixed(1)}倍</td>
+          <td><strong>${maxShares} 株</strong> (¥${investedAmount.toLocaleString()})</td>
+          <td>¥${annualDividend.toLocaleString()} / 年</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("countDisplay").textContent = `${filtered.length} 社（購入可: ${affordableCount}社）`;
+      const avgYield = filtered.length > 0 ? (totalYield / filtered.length).toFixed(2) : "0.00";
+      document.getElementById("avgYieldDisplay").textContent = `${avgYield} %`;
+
+      document.getElementById("aiSummaryText").textContent =
+        `現在の設定予算（¥${budget.toLocaleString()}）では、抽出された ${filtered.length} 社のうち ${affordableCount} 社が単元未満株（1株投資）で購入可能です。` +
+        `特にNTT（9432）やソフトバンク（9434）などの通信株は1株200円前後から分散投資しやすく、Excel出力ボタンからCSVを書き出してVBAマクロで自動帳票化できます。`;
+    }
+
+    // Excelで文字化けしないBOM付きUTF-8のCSVを即時ダウンロードする関数
+    function exportToExcelCSV() {
+      const budget = Number(document.getElementById("budgetInput").value) || 10000;
+      let csv = "\uFEFF証券コード,企業名,業種,1株株価(円),配当利回り(%),PER(倍),予算内購入可能株数,必要投資額(円),年間予想配当金(円)\n";
+
+      companies.forEach(c => {
+        const maxShares = Math.floor(budget / c.price);
+        const investedAmount = maxShares * c.price;
+        const annualDividend = Math.round(investedAmount * (c.yield / 100));
+        csv += `${c.code},"${c.name}",${c.sector},${c.price},${c.yield},${c.per},${maxShares},${investedAmount},${annualDividend}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `企業データ自動分析レポート_予算${budget}円.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("budgetInput").addEventListener("input", renderTable);
+    document.getElementById("sectorFilter").addEventListener("change", renderTable);
+    document.getElementById("yieldFilter").addEventListener("change", renderTable);
+    document.getElementById("keywordInput").addEventListener("input", renderTable);
+
+    renderTable();
+  </script>
+</body>
+</html>
